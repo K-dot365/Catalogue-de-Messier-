@@ -1330,11 +1330,42 @@ function toggle(btn) {
     save();
     updateCounts();
 }
+ // --- 1. プルダウンの表示を更新する関数を追加 ---
+function updatePresetDropdown() {
+    const select = document.getElementById('preset');
+    const options = select.options;
+
+    for (let i = 0; i < options.length; i++) {
+        const key = options[i].value;
+        const preset = PRESETS[key];
+        if (!preset) continue;
+
+        // このプリセットに含まれる有効なラベル（天体）のリスト
+        const validLabels = preset.labels.filter(l => l !== null && l.id);
+        const total = validLabels.length;
+        
+        // localStorage から点灯状態をカウント
+        let litCount = 0;
+        validLabels.forEach(label => {
+            if (localStorage.getItem(`status-${label.id}`) === "true") {
+                litCount++;
+            }
+        });
+
+        const percent = total > 0 ? Math.floor((litCount / total) * 100) : 0;
+        
+        // 元のラベル名（例: "1月総写"）を取得して、進捗を結合
+        // 初回実行時のために元の名前を保持しておく工夫
+        if (!options[i].dataset.originalText) {
+            options[i].dataset.originalText = options[i].textContent;
+        }
+        const baseName = options[i].dataset.originalText;
+        options[i].textContent = `${baseName} (${percent}%)`;
+    }
+}
 
 function updateCounts() {
     const pKey = presetEl.value;
-    const allBtns = Array.from(cellsEl.querySelectorAll('button[data-idx]'));
-
     litCountEl.textContent = cellsEl.querySelectorAll('button.lit').length;
     
     // 報酬ボタン表示
@@ -1342,6 +1373,7 @@ function updateCounts() {
     document.getElementById('rewardBtn').style.display = anyLegendaryLit ? "inline-block" : "none";
 
     updateTotalProgress();
+ updatePresetDropdown();
 }
 
 function updateTotalProgress() {
@@ -1391,9 +1423,15 @@ presetEl.onchange = (e) => {
     localStorage.setItem('lastPreset', name);
 };
 
+// --- 3. 既存の window.onload を修正 ---
 window.onload = () => {
     const last = localStorage.getItem('lastPreset') || 'messier';
     presetEl.value = last;
+    
+    // 全プリセットの初期計算を行う
+    updatePresetDropdown(); 
+    
+    // 既存の初期化処理
     presetEl.onchange({ target: { value: last } });
 };
 </script>

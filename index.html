@@ -1327,12 +1327,8 @@ function toggle(btn) {
     const isLit = btn.classList.contains('lit');
     localStorage.setItem(`status-${label.id}`, isLit ? "true" : "false");
 
-    updateCounts();
-}
-
-    btn.classList.toggle('lit');
-    updateCounts();
     save();
+    updateCounts();
 }
 
 function updateCounts() {
@@ -1345,25 +1341,7 @@ function updateCounts() {
     const anyLegendaryLit = cellsEl.querySelector('button.legendary.lit') !== null;
     document.getElementById('rewardBtn').style.display = anyLegendaryLit ? "inline-block" : "none";
 
-    checkProgressButtons();
     updateTotalProgress();
-}
-
-function checkProgressButtons() {
-    const mapping = {"tenkenmin":"pb1","stargazing-specialist":"pb2","mvp":"pb3","top-adventure-explorer":"pb4","syaken-A":"pb5"};
-    Object.entries(PRESETS).forEach(([key, preset]) => {
-        const pb = document.getElementById(mapping[key]);
-        if (!pb) return;
-
-        let isAchieved = false;
-        if (key === presetEl.value) {
-            isAchieved = cellsEl.querySelector('button.legendary.lit') !== null;
-        } else {
-            const data = JSON.parse(localStorage.getItem(`achievements-${key}`) || '{"lit":[]}');
-            isAchieved = (preset.legendary || []).some(idx => data.lit.includes(idx));
-        }
-        pb.classList.toggle('lit', isAchieved);
-    });
 }
 
 function updateTotalProgress() {

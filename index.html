@@ -1316,17 +1316,19 @@ function buildGrid(r, c, labels) {
 }
 
 function toggle(btn) {
-    const idx = parseInt(btn.dataset.idx);
     const pKey = presetEl.value;
+ const label = PRESETS[pKey].labels[btn.dataset.idx];
+ // IDがないセル（nullなど）は無視
+    if (!label || !label.id) return;
 
-    // 自動点灯セルのクリックガード
-    if (pKey === 'syaken-A' && idx === 14) return;
-    if (pKey === 'stargazing-specialist' && idx === 25) return;
-    if (["tenkenmin", "mvp", "top-adventure-explorer"].includes(pKey)) {
-        let lastIdx = PRESETS[pKey].labels.length - 1;
-        while (lastIdx >= 0 && PRESETS[pKey].labels[lastIdx] === null) lastIdx--;
-        if (idx === lastIdx) return;
-    }
+    btn.classList.toggle('lit');
+    
+    // 保存処理：天体IDをキーにして保存
+    const isLit = btn.classList.contains('lit');
+    localStorage.setItem(`status-${label.id}`, isLit ? "true" : "false");
+
+    updateCounts();
+}
 
     btn.classList.toggle('lit');
     updateCounts();
@@ -1390,9 +1392,15 @@ function save() {
 }
 
 function load(name) {
-    const data = JSON.parse(localStorage.getItem(`achievements-${name}`) || '{"lit":[]}');
+    const p = PRESETS[name];
     cellsEl.querySelectorAll('button').forEach(b => {
-        if (data.lit.includes(parseInt(b.dataset.idx))) b.classList.add('lit');
+        const label = p.labels[b.dataset.idx];
+        if (label && label.id) {
+            // localStorageから天体IDごとの状態を読み込む
+            const status = localStorage.getItem(`status-${label.id}`);
+            if (status === "true") b.classList.add('lit');
+            else b.classList.remove('lit');
+        }
     });
     updateCounts();
 }

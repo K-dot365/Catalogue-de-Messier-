@@ -1365,8 +1365,7 @@ function updateTotalProgress() {
 }
 
 function save() {
-    const lit = Array.from(cellsEl.querySelectorAll('button.lit')).map(b => parseInt(b.dataset.idx));
-    localStorage.setItem(`achievements-${presetEl.value}`, JSON.stringify({ lit }));
+updateTotalProgress();
 }
 
 function load(name) {

@@ -454,35 +454,6 @@ function toggle(btn) {
 function updateCounts() {
     const pKey = presetEl.value;
     const allBtns = Array.from(cellsEl.querySelectorAll('button[data-idx]'));
-    
-    // 特殊ロジック
-    if (["tenkenmin", "top-adventure-explorer"].includes(pKey)) {
-        const lastBtn = allBtns[allBtns.length - 1];
-        const others = allBtns.slice(0, -1);
-        const allLit = others.every(b => b.classList.contains('lit'));
-        lastBtn.classList.toggle('lit', allLit);
-    }
-
-    if (pKey === "stargazing-specialist") {
-        const lastBtn = cellsEl.querySelector('button[data-idx="25"]');
-        const first5 = [0,1,2,3,4].every(i => cellsEl.querySelector(`button[data-idx="${i}"]`)?.classList.contains('lit'));
-        const nextCount = Array.from({length:20}, (_,i)=>i+5).filter(i => cellsEl.querySelector(`button[data-idx="${i}"]`)?.classList.contains('lit')).length;
-        if (lastBtn) lastBtn.classList.toggle('lit', first5 && nextCount >= 15);
-    }
-
-    if (pKey === "syaken-A") {
-        const lastBtn = cellsEl.querySelector('button[data-idx="14"]');
-        const others = Array.from({length:12}, (_,i)=>i).every(i => cellsEl.querySelector(`button[data-idx="${i}"]`)?.classList.contains('lit'));
-        if (lastBtn) lastBtn.classList.toggle('lit', others);
-    }
-
-    if (pKey === "mvp") {
-        const lastBtn = allBtns[allBtns.length - 1];
-        const p = [0,3,6].every(i => cellsEl.querySelector(`button[data-idx="${i}"]`)?.classList.contains('lit'));
-        const c = [1,4,7].some(i => cellsEl.querySelector(`button[data-idx="${i}"]`)?.classList.contains('lit'));
-        const m = [2,5,8].some(i => cellsEl.querySelector(`button[data-idx="${i}"]`)?.classList.contains('lit'));
-        if (lastBtn) lastBtn.classList.toggle('lit', p && c && m);
-    }
 
     litCountEl.textContent = cellsEl.querySelectorAll('button.lit').length;
     
@@ -554,7 +525,7 @@ presetEl.onchange = (e) => {
 };
 
 window.onload = () => {
-    const last = localStorage.getItem('lastPreset') || 'tenkenmin';
+    const last = localStorage.getItem('lastPreset') || 'messier';
     presetEl.value = last;
     presetEl.onchange({ target: { value: last } });
 };

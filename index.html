@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>メシエ進捗</title>
+    <style>
+        :root {
+            --bg: #0e0f10;
+            --panel: #15191e;
+            --border: #2b3139;
+            --text: #dfe7ef;
+            --muted: #8d99a6;
+            --btn: #1e242b;
+            --btn-hover: #28313a;
+            --accent: #4caf50;
+            --accent-glow: #b3ffb8;
+            --gold: #f4c542;
+        }
+
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
+
+        body {
+            margin: 0;
+            background: radial-gradient(1000px 600px at 20% -10%, #1b2027, var(--bg));
+            color: var(--text);
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+
+        .app { width: min(1100px, 96vw); }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .title-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        h1 {
+            font-size: clamp(18px, 2.3vw, 24px);
+            margin: 0;
+            letter-spacing: .02em;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .control, button, select {
+            background: var(--btn);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 12px;
+            font: inherit;
+            transition: transform .02s ease, background .2s ease, border-color .2s ease;
+            outline: none;
+        }
+
+        button:hover, select:hover { background: var(--btn-hover); }
+        button:active { transform: translateY(1px); }
+
+        .progress-btns {
+            display: flex;
+            gap: 6px;
+        }
+
+        .progress-btns button {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: #222;
+            border: 1px solid #444;
+            color: #aaa;
+            font-weight: bold;
+            pointer-events: none;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .progress-btns button.lit {
+            background: #0f1419;
+            border-color: rgba(76, 175, 80, .7);
+            color: #fff;
+            box-shadow: 0 0 0 1px rgba(76, 175, 80, .35),
+                        0 4px 12px rgba(76, 175, 80, .4),
+                        inset 0 0 18px rgba(76, 175, 80, .25);
+        }
+
+        .grid {
+            background: linear-gradient(180deg, #13171c, var(--panel));
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            position: relative;
+        }
+
+        .cells { display: grid; gap: 12px; }
+
+        .cell {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1/1;
+            overflow: hidden;
+            border-radius: 14px;
+        }
+
+        .cell button {
+            width: 100%;
+            height: 100%;
+            background: #0f1419;
+            border: 1px solid #212932;
+            cursor: pointer;
+            position: relative;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .cell img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .cell .badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: rgba(27, 34, 42, 0.8);
+            border: 1px solid #2a313a;
+            color: var(--muted);
+            z-index: 2;
+        }
+
+        .cell-text {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            padding: 6px 4px;
+            font-size: clamp(10px, 1.5vw, 12px);
+            line-height: 1.2;
+            z-index: 2;
+        }
+
+        /* 点灯状態 */
+        .cell button.lit {
+            border-color: rgba(76, 175, 80, .7);
+            box-shadow: 0 0 0 1px rgba(76, 175, 80, .7),
+                        0 4px 22px 0 rgba(76, 175, 80, .25),
+                        inset 0 0 18px rgba(76, 175, 80, .25);
+        }
+
+        .cell button.lit img, .cell button.lit .cell-text {
+            filter: brightness(1.2) drop-shadow(0 0 5px rgba(76, 255, 80, 0.4));
+        }
+
+        /* レジェンダリー設定 */
+        .cell button.legendary { border-color: rgba(244, 197, 66, 0.5); }
+        .cell button.legendary.lit {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 1px rgba(244,197,66,.45),
+                        0 6px 26px 0 rgba(244,197,66,.35),
+                        inset 0 0 22px rgba(244,197,66,.3);
+            background: radial-gradient(120px 120px at 30% 20%, rgba(244,197,66,.22), transparent), #0f1419;
+        }
+
+        /* 報酬ボタン共通 */
+        #rewardBtn, #rewardBtnBlue {
+            border-radius: 12px;
+            font-weight: bold;
+            color: #fff;
+            transition: all 0.3s ease;
+        }
+
+        /* 緑/金 報酬ボタン */
+        #rewardBtn {
+            border: 1px solid var(--accent);
+            background: var(--accent);
+            box-shadow: 0 0 15px rgba(244,197,66,0.5);
+        }
+        #rewardBtn:hover:not(:disabled) {
+            box-shadow: 0 0 20px var(--accent-glow);
+            transform: scale(1.05);
+        }
+
+        /* 青 報酬ボタン */
+        #rewardBtnBlue {
+            border: 1px solid #42a5f5;
+            background: #42a5f5;
+            box-shadow: 0 0 15px rgba(66, 165, 245, 0.7);
+        }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 12px; }
+            header { flex-direction: column; align-items: flex-start; }
+            .controls { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <header>
+        <div class="title-row">
+            <h1>2025夏合宿 実績解除</h1>
+            <button id="totalProgressDisplay" class="control" style="pointer-events: none;"></button>
+        </div>
+        <div class="controls">
+            <select id="preset">
+                <option value="tenkenmin">天研民との交流</option>
+                <option value="stargazing-specialist">観測のスペシャリスト</option>
+                <option value="mvp">ＭＶＰ</option>
+                <option value="top-adventure-explorer">一流冒険家</option>
+                <option value="syaken-A">写研のエース</option>
+            </select>
+            <div id="progressBtns" class="progress-btns">
+                <button id="pb1">1</button>
+                <button id="pb2">2</button>
+                <button id="pb3">3</button>
+                <button id="pb4">4</button>
+                <button id="pb5">5</button>
+            </div>
+            <button id="rewardBtn" style="display:none;">報酬獲得！</button>
+            <button id="rewardBtnBlue" style="display:none;">報酬獲得！</button>
+        </div>
+    </header>
+
+    <section class="grid">
+        <div id="cells" class="cells"></div>
+        <div class="footer">
+            <div class="count"><span id="litCount">0</span> / <span id="totalCount">0</span> 解放</div>
+            <div class="hint">セルをクリックで点灯/消灯</div>
+        </div>
+    </section>
+</div>
+
+<script>
+const cellsEl = document.getElementById('cells');
+const presetEl = document.getElementById('preset');
+const litCountEl = document.getElementById('litCount');
+const totalCountEl = document.getElementById('totalCount');
+
+const PRESETS = {
+    "tenkenmin": {
+        size:[17,3],
+        labels:[
+            {img:"実績解除画像/ex001.jpg",text:"3.けいた"},{img:"実績解除画像/ex002.jpg",text:"3.しょーたろー"},
+            {img:"実績解除画像/ex003.jpg",text:"3.かほ"},{img:"実績解除画像/ex004.jpg",text:"3.げん"},
+            {img:"実績解除画像/ex005.jpg",text:"3.まどか"},{img:"実績解除画像/ex006.jpg",text:"3.ゆき"},
+            {img:"実績解除画像/ex007.jpg",text:"3.なぎ"},{img:"実績解除画像/ex008.jpg",text:"3.じり"},
+            {img:"実績解除画像/ex009.jpg",text:"3.つよぽん"},{img:"実績解除画像/ex010.jpg",text:"3.てるやん"},
+            {img:"実績解除画像/ex011.jpg",text:"3.けあん"},{img:"実績解除画像/ex012.jpg",text:"2.なっちゃん"},
+            {img:"実績解除画像/ex013.jpg",text:"2.はやと"},{img:"実績解除画像/ex014.jpg",text:"2.はるな"},
+            {img:"実績解除画像/ex015.jpg",text:"2.ゆっきー"},{img:"実績解除画像/ex016.jpg",text:"2.ともき, よこやま"},
+            {img:"実績解除画像/ex017.jpg",text:"2.よっしー, ひとし"},{img:"実績解除画像/ex018.jpg",text:"1.たつあき"},
+            {img:"実績解除画像/ex019.jpg",text:"1.あるが"},{img:"実績解除画像/ex020.jpg",text:"1.なな"},
+            {img:"実績解除画像/ex021.jpg",text:"1.ひとし, おくむら"},{img:"実績解除画像/ex022.jpg",text:"1.ぐっち"},
+            {img:"実績解除画像/ex023.jpg",text:"1.のの"},{img:"実績解除画像/ex024.jpg",text:"1.なな, なっちゃん"},
+            {img:"実績解除画像/ex025.jpg",text:"1.しょうご, ピンク"},{img:"実績解除画像/ex026.jpg",text:"1.せりな"},
+            {img:"実績解除画像/ex027.jpg",text:"1.りさ"},{img:"実績解除画像/ex028.jpg",text:"1.あいり"},
+            {img:"実績解除画像/ex029.jpg",text:"1.あきら"},{img:"実績解除画像/ex030.jpg",text:"1.しんたろう"},
+            {img:"実績解除画像/ex031.jpg",text:"1.そうすけ"},{img:"実績解除画像/ex032.jpg",text:"1.ひかる"},
+            {img:"実績解除画像/ex033.jpg",text:"1.みひろ"},{img:"実績解除画像/ex034.jpg",text:"1.ゆーいち"},
+            {img:"実績解除画像/ex035.jpg",text:"1.ふじーた"},{img:"実績解除画像/ex036.jpg",text:"1.しゅん"},
+            {img:"実績解除画像/ex037.jpg",text:"1.かいと"},{img:"実績解除画像/ex038.jpg",text:"1.ちーちゃん"},
+            {img:"実績解除画像/ex039.jpg",text:"1.さき, さっきー"},{img:"実績解除画像/ex040.jpg",text:"1.けんじろう"},
+            {img:"実績解除画像/ex041.jpg",text:"1.さくら"},{img:"実績解除画像/ex042.jpg",text:"1.いっさ"},
+            {img:"実績解除画像/ex043.jpg",text:"1.もとき, やました"},{img:"実績解除画像/ex044.jpg",text:"4.おかじー"},
+            {img:"実績解除画像/ex045.jpg",text:"4.OBOG様"},{img:"実績解除画像/ex046.jpg",text:"4.そら"},
+            {img:"実績解除画像/ex047.jpg",text:"4.マスター"},{img:"実績解除画像/ex048.jpg",text:"4.はばたん"},
+            {img:"実績解除画像/ex051.jpg",text:"全員達成"},null,null
+        ],
+        legendary:[48]
+    },
+    "stargazing-specialist": {
+        size:[9,3],
+        labels:[
+            {img:"実績解除画像/st001.jpg",text:"望遠鏡組み立て"},{img:"実績解除画像/st002.jpg",text:"総観さんを呼ぶ"},
+            {img:"実績解除画像/st003.jpg",text:"ウォッチング開く"},{img:"実績解除画像/st004.jpg",text:"同定依頼"},
+            {img:"実績解除画像/st005.jpg",text:"望遠鏡片付け"},{img:"実績解除画像/st006.jpg",text:"M103"},
+            {img:"実績解除画像/st007.jpg",text:"M110"},{img:"実績解除画像/st008.jpg",text:"M15"},
+            {img:"実績解除画像/st009.jpg",text:"M34"},{img:"実績解除画像/st010.jpg",text:"M33"},
+            {img:"実績解除画像/st011.jpg",text:"M36"},{img:"実績解除画像/st012.jpg",text:"M37"},
+            {img:"実績解除画像/st013.jpg",text:"M38"},{img:"実績解除画像/st014.jpg",text:"M45"},
+            {img:"実績解除画像/st015.jpg",text:"M71"},{img:"実績解除画像/st016.jpg",text:"M2"},
+            {img:"実績解除画像/st017.jpg",text:"M30"},{img:"実績解除画像/st018.jpg",text:"M27"},
+            {img:"実績解除画像/st019.jpg",text:"M29"},{img:"実績解除画像/st020.jpg",text:"M57"},
+            {img:"実績解除画像/st021.jpg",text:"M35"},{img:"実績解除画像/st022.jpg",text:"M42"},
+            {img:"実績解除画像/st023.jpg",text:"M44"},{img:"実績解除画像/st024.jpg",text:"M79"},
+            {img:"実績解除画像/st025.jpg",text:"M41"},{img:"実績解除画像/st026.jpg",text:"実績達成"},null
+        ],
+        legendary:[25]
+    },
+    "mvp": {
+        size:[4,3],
+        labels:[
+            {img:"実績解除画像/mv001.jpg",text:"バスレク参加"},{img:"実績解除画像/mv002.jpg",text:"バスレク優勝"},
+            {img:"実績解除画像/mv003.jpg",text:"バスレクMVP"},{img:"実績解除画像/mv004.jpg",text:"運動参加"},
+            {img:"実績解除画像/mv005.jpg",text:"運動優勝"},{img:"実績解除画像/mv006.jpg",text:"運動MVP"},
+            {img:"実績解除画像/mv007.jpg",text:"クイズ参加"},{img:"実績解除画像/mv008.jpg",text:"クイズ優勝"},
+            {img:"実績解除画像/mv009.jpg",text:"クイズMVP"},{img:"実績解除画像/mv010.jpg",text:"実績達成"},null,null
+        ],
+        legendary:[9]
+    },
+    "top-adventure-explorer": {
+        size:[4,3],
+        labels:[
+            {img:"実績解除画像/ad001.jpg",text:"お寺参拝"},{img:"実績解除画像/ad002.jpg",text:"大神山神社"},
+            {img:"実績解除画像/ad003.jpg",text:"ジャンプ台"},{img:"実績解除画像/ad004.jpg",text:"ゲレンデ"},
+            {img:"実績解除画像/ad005.jpg",text:"モンベル"},{img:"実績解除画像/ad006.jpg",text:"大山自然館"},
+            {img:"実績解除画像/ad007.jpg",text:"足湯"},{img:"実績解除画像/ad008.jpg",text:"砂丘の海"},
+            {img:"実績解除画像/ad009.jpg",text:"馬の背"},{img:"実績解除画像/ad010.jpg",text:"モニュメント"},
+            {img:"実績解除画像/ad011.jpg",text:"実績達成"},null
+        ],
+        legendary:[10]
+    },
+    "syaken-A": {
+        size:[5,3],
+        labels:[
+            {img:"実績解除画像/sy001.JPG",text:"📸星空(他)"},{img:"実績解除画像/sy002.jpg",text:"📸天の川"},
+            {img:"実績解除画像/st007.jpg",text:"📸銀河"},{img:"実績解除画像/st022.jpg",text:"📸星雲"},
+            {img:"実績解除画像/st014.jpg",text:"📸星団"},{img:"実績解除画像/sy005.jpg",text:"📸彗星"},
+            {img:"実績解除画像/sy013.jpg",text:"昼投票用"},{img:"実績解除画像/sy006.jpg",text:"夜投票用"},
+            {img:"実績解除画像/mv006.jpg",text:"運動会"},{img:"実績解除画像/sy008.jpg",text:"食事"},
+            {img:"実績解除画像/sy009.jpg",text:"花火"},{img:"実績解除画像/sy010.jpg",text:"遊び風景"},
+            {img:"実績解除画像/sy013.jpg",text:"昼1位"},{img:"実績解除画像/sy014.jpg",text:"夜1位"},
+            {img:"実績解除画像/st026.jpg",text:"全達成"},
+        ],
+        legendary:[12, 13, 14]
+    }
+};
+
+let currentLabels = [];
+let currentLegendary = new Set();
+
+function buildGrid(r, c, labels) {
+    cellsEl.style.gridTemplateColumns = `repeat(${c}, 1fr)`;
+    cellsEl.innerHTML = '';
+    currentLabels = labels;
+    let effectiveCount = 0;
+
+    for (let i = 0; i < r * c; i++) {
+        const label = labels[i];
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+
+        if (label) {
+            effectiveCount++;
+            const btn = document.createElement('button');
+            btn.dataset.idx = i;
+            if (currentLegendary.has(i)) btn.classList.add('legendary');
+
+            btn.innerHTML = `
+                <span class="badge">#${i + 1}</span>
+                <img src="${label.img}" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
+                <span class="cell-text">${label.text}</span>
+            `;
+
+            btn.onclick = () => toggle(btn);
+            cell.appendChild(btn);
+        }
+        cellsEl.appendChild(cell);
+    }
+    totalCountEl.textContent = effectiveCount;
+}
+
+function toggle(btn) {
+    const idx = parseInt(btn.dataset.idx);
+    const pKey = presetEl.value;
+
+    // 自動点灯セルのクリックガード
+    if (pKey === 'syaken-A' && idx === 14) return;
+    if (pKey === 'stargazing-specialist' && idx === 25) return;
+    if (["tenkenmin", "mvp", "top-adventure-explorer"].includes(pKey)) {
+        let lastIdx = PRESETS[pKey].labels.length - 1;
+        while (lastIdx >= 0 && PRESETS[pKey].labels[lastIdx] === null) lastIdx--;
+        if (idx === lastIdx) return;
+    }
+
+    btn.classList.toggle('lit');
+    updateCounts();
+    save();
+}
+
+function updateCounts() {
+    const pKey = presetEl.value;
+    const allBtns = Array.from(cellsEl.querySelectorAll('button[data-idx]'));
+    
+    // 特殊ロジック
+    if (["tenkenmin", "top-adventure-explorer"].includes(pKey)) {
+        const lastBtn = allBtns[allBtns.length - 1];
+        const others = allBtns.slice(0, -1);
+        const allLit = others.every(b => b.classList.contains('lit'));
+        lastBtn.classList.toggle('lit', allLit);
+    }
+
+    if (pKey === "stargazing-specialist") {
+        const lastBtn = cellsEl.querySelector('button[data-idx="25"]');
+        const first5 = [0,1,2,3,4].every(i => cellsEl.querySelector(`button[data-idx="${i}"]`)?.classList.contains('lit'));
+        const nextCount = Array.from({length:20}, (_,i)=>i+5).filter(i => cellsEl.querySelector(`button[data-idx="${i}"]`)?.classList.contains('lit')).length;
+        if (lastBtn) lastBtn.classList.toggle('lit', first5 && nextCount >= 15);
+    }
+
+    if (pKey === "syaken-A") {
+        const lastBtn = cellsEl.querySelector('button[data-idx="14"]');
+        const others = Array.from({length:12}, (_,i)=>i).every(i => cellsEl.querySelector(`button[data-idx="${i}"]`)?.classList.contains('lit'));
+        if (lastBtn) lastBtn.classList.toggle('lit', others);
+    }
+
+    if (pKey === "mvp") {
+        const lastBtn = allBtns[allBtns.length - 1];
+        const p = [0,3,6].every(i => cellsEl.querySelector(`button[data-idx="${i}"]`)?.classList.contains('lit'));
+        const c = [1,4,7].some(i => cellsEl.querySelector(`button[data-idx="${i}"]`)?.classList.contains('lit'));
+        const m = [2,5,8].some(i => cellsEl.querySelector(`button[data-idx="${i}"]`)?.classList.contains('lit'));
+        if (lastBtn) lastBtn.classList.toggle('lit', p && c && m);
+    }
+
+    litCountEl.textContent = cellsEl.querySelectorAll('button.lit').length;
+    
+    // 報酬ボタン表示
+    const anyLegendaryLit = cellsEl.querySelector('button.legendary.lit') !== null;
+    document.getElementById('rewardBtn').style.display = anyLegendaryLit ? "inline-block" : "none";
+
+    checkProgressButtons();
+    updateTotalProgress();
+}
+
+function checkProgressButtons() {
+    const mapping = {"tenkenmin":"pb1","stargazing-specialist":"pb2","mvp":"pb3","top-adventure-explorer":"pb4","syaken-A":"pb5"};
+    Object.entries(PRESETS).forEach(([key, preset]) => {
+        const pb = document.getElementById(mapping[key]);
+        if (!pb) return;
+
+        let isAchieved = false;
+        if (key === presetEl.value) {
+            isAchieved = cellsEl.querySelector('button.legendary.lit') !== null;
+        } else {
+            const data = JSON.parse(localStorage.getItem(`achievements-${key}`) || '{"lit":[]}');
+            isAchieved = (preset.legendary || []).some(idx => data.lit.includes(idx));
+        }
+        pb.classList.toggle('lit', isAchieved);
+    });
+}
+
+function updateTotalProgress() {
+    let totalLit = 0;
+    let totalCells = 0;
+
+    Object.entries(PRESETS).forEach(([key, preset]) => {
+        const effective = preset.labels.filter(l => l !== null).length;
+        totalCells += effective;
+        if (key === presetEl.value) {
+            totalLit += cellsEl.querySelectorAll('button.lit').length;
+        } else {
+            const data = JSON.parse(localStorage.getItem(`achievements-${key}`) || '{"lit":[]}');
+            totalLit += data.lit.length;
+        }
+    });
+
+    const percent = (totalLit / totalCells) * 100;
+    document.getElementById('totalProgressDisplay').textContent = `${totalLit}/${totalCells} (${percent.toFixed(1)}%)`;
+    document.getElementById('rewardBtnBlue').style.display = percent >= 70 ? 'inline-block' : 'none';
+}
+
+function save() {
+    const lit = Array.from(cellsEl.querySelectorAll('button.lit')).map(b => parseInt(b.dataset.idx));
+    localStorage.setItem(`achievements-${presetEl.value}`, JSON.stringify({ lit }));
+}
+
+function load(name) {
+    const data = JSON.parse(localStorage.getItem(`achievements-${name}`) || '{"lit":[]}');
+    cellsEl.querySelectorAll('button').forEach(b => {
+        if (data.lit.includes(parseInt(b.dataset.idx))) b.classList.add('lit');
+    });
+    updateCounts();
+}
+
+presetEl.onchange = (e) => {
+    const name = e.target.value;
+    const p = PRESETS[name];
+    currentLegendary = new Set(p.legendary || []);
+    buildGrid(p.size[0], p.size[1], p.labels);
+    load(name);
+    localStorage.setItem('lastPreset', name);
+};
+
+window.onload = () => {
+    const last = localStorage.getItem('lastPreset') || 'tenkenmin';
+    presetEl.value = last;
+    presetEl.onchange({ target: { value: last } });
+};
+</script>
+</body>
+</html>

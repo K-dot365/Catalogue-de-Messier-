@@ -1377,23 +1377,34 @@ function updateCounts() {
 }
 
 function updateTotalProgress() {
-    let totalLit = 0;
-    let totalCells = 0;
+    // 1. 現在選択されているプリセットのキーを取得
+    const pKey = presetEl.value;
+    const preset = PRESETS[pKey];
+    
+    if (!preset) return;
 
-    Object.entries(PRESETS).forEach(([key, preset]) => {
-        const effective = preset.labels.filter(l => l !== null).length;
-        totalCells += effective;
-        if (key === presetEl.value) {
-            totalLit += cellsEl.querySelectorAll('button.lit').length;
-        } else {
-            const data = JSON.parse(localStorage.getItem(`achievements-${key}`) || '{"lit":[]}');
-            totalLit += data.lit.length;
-        }
-    });
+    // 2. このプリセット内の「有効なターゲット数（null以外）」をカウント
+    const validLabels = preset.labels.filter(l => l !== null);
+    const totalCells = validLabels.length;
 
-    const percent = (totalLit / totalCells) * 100;
-    document.getElementById('totalProgressDisplay').textContent = `${totalLit}/${totalCells} (${percent.toFixed(1)}%)`;
-    document.getElementById('rewardBtnBlue').style.display = percent >= 70 ? 'inline-block' : 'none';
+    // 3. 現在画面上で「点灯（lit）」しているボタンの数をカウント
+    const totalLit = cellsEl.querySelectorAll('button.lit').length;
+
+    // 4. パーセンテージ計算（0除算防止）
+    const percent = totalCells > 0 ? (totalLit / totalCells * 100) : 0;
+
+    // 5. タイトル横の表示（totalProgressDisplay）を更新
+    const displayEl = document.getElementById('totalProgressDisplay');
+    if (displayEl) {
+        displayEl.textContent = `${totalLit}/${totalCells} (${percent.toFixed(1)}%)`;
+    }
+
+    // 6. 進捗に応じた報酬ボタンの表示制御
+    // 100%以上でコンプリートボタンを表示
+    const rewardBlue = document.getElementById('rewardBtnBlue');
+    if (rewardBlue) {
+        rewardBlue.style.display = percent == 100 ? 'inline-block' : 'none';
+    }
 }
 
 function save() {

@@ -1361,12 +1361,35 @@ function toggle(btn) {
 
 function updateCounts() {
     const pKey = presetEl.value;
-    litCountEl.textContent = cellsEl.querySelectorAll('button.lit').length;
-    
-    // 報酬ボタン表示
-    const anyLegendaryLit = cellsEl.querySelector('button.legendary.lit') !== null;
-    document.getElementById('rewardBtn').style.display = anyLegendaryLit ? "inline-block" : "none";
+    // 1. 現在の画面の点灯数をカウント
+    const currentLitCount = cellsEl.querySelectorAll('button[class*="lit"]').length;
+    // litCountElがあれば更新（以前のコードの名残りがある場合）
+    if (typeof litCountEl !== 'undefined') litCountEl.textContent = currentLitCount;
 
+    // 2. 「メシエ一覧(messier)」の累計点灯数をチェック（画面がどこであっても計算）
+    const messierPreset = PRESETS['messier'];
+    let messierTotalLit = 0;
+    if (messierPreset) {
+        messierPreset.labels.forEach(label => {
+            if (label && label.id) {
+                // 保存されている値が "true" または "green" などの色名ならカウント
+                const status = localStorage.getItem(`status-${label.id}`);
+                if (status && status !== "false") {
+                    messierTotalLit++;
+                }
+            }
+        });
+    }
+
+    // 3. 報酬ボタン（同定権獲得）の表示条件
+    // 条件：メシエ一覧で50個以上、かつ「同定権獲得」ボタンが存在する場合
+    const rewardBtn = document.getElementById('rewardBtn');
+    if (rewardBtn) {
+        // メシエ一覧の進捗が50個を超えたら表示
+        rewardBtn.style.display = messierTotalLit >= 50 ? "inline-block" : "none";
+    }
+
+    // 4. その他の更新処理
     updateTotalProgress();
 }
 

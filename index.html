@@ -1393,35 +1393,44 @@ function updateCounts() {
     updateTotalProgress();
 }
 
-function updateTotalProgress() {
-    // 1. 現在選択されているプリセットのキーを取得
+function updateCounts() {
     const pKey = presetEl.value;
-    const preset = PRESETS[pKey];
     
-    if (!preset) return;
+    // 1. 「メシエ一覧(messier)」の進捗をチェック（画面がどこであっても裏で計算）
+    const messierPreset = PRESETS['messier'];
+    let messierTotalLit = 0;
+    let messierTotalCount = 0;
 
-    // 2. このプリセット内の「有効なターゲット数（null以外）」をカウント
-    const validLabels = preset.labels.filter(l => l !== null);
-    const totalCells = validLabels.length;
+    if (messierPreset) {
+        // 有効な天体（null以外かつIDあり）を抽出
+        const validMessierLabels = messierPreset.labels.filter(l => l !== null && l.id);
+        messierTotalCount = validMessierLabels.length; // 通常は110個
 
-    // 3. 現在画面上で「点灯（lit）」しているボタンの数をカウント
-    const totalLit = cellsEl.querySelectorAll('button.lit').length;
-
-    // 4. パーセンテージ計算（0除算防止）
-    const percent = totalCells > 0 ? (totalLit / totalCells * 100) : 0;
-
-    // 5. タイトル横の表示（totalProgressDisplay）を更新
-    const displayEl = document.getElementById('totalProgressDisplay');
-    if (displayEl) {
-        displayEl.textContent = `${totalLit}/${totalCells} (${percent.toFixed(1)}%)`;
+        validMessierLabels.forEach(label => {
+            const status = localStorage.getItem(`status-${label.id}`);
+            // 保存されている値が "true" または色名であればカウント
+            if (status && status !== "false") {
+                messierTotalLit++;
+            }
+        });
     }
 
-    // 6. 進捗に応じた報酬ボタンの表示制御
-    // 100%以上でコンプリートボタンを表示
+    // 2. 報酬ボタン1：同定権獲得（メシエ一覧で50個以上）
+    const rewardBtn = document.getElementById('rewardBtn');
+    if (rewardBtn) {
+        rewardBtn.style.display = messierTotalLit >= 50 ? "inline-block" : "none";
+    }
+
+    // 3. 報酬ボタン2：☆メシエコンプリート☆（メシエ一覧が全点灯）
     const rewardBlue = document.getElementById('rewardBtnBlue');
     if (rewardBlue) {
-        rewardBlue.style.display = percent == 100 ? 'inline-block' : 'none';
+        // メシエ一覧の有効数と点灯数が一致、かつ0でない場合
+        const isComplete = (messierTotalLit === messierTotalCount) && messierTotalCount > 0;
+        rewardBlue.style.display = isComplete ? "inline-block" : "none";
     }
+
+    // 4. タイトル横の進捗表示（今見ているプリセットの％）を更新
+    updateTotalProgress();
 }
 
 function save() {
